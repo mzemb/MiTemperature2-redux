@@ -12,6 +12,22 @@ This file explains very detailed about the usage and covers everything you need 
 
 """
 
+dSENSORS = {
+	"A4:C1:38:E2:19:A3" : "ATC_0"
+,	"A4:C1:38:B3:AA:91" : "ATC_1"
+,	"A4:C1:38:A2:9D:7E" : "ATC_2"
+,	"A4:C1:38:50:02:79" : "ATC_3"
+,	"A4:C1:38:67:F1:1B" : "ATC_4"
+,	"A4:C1:38:23:94:C8" : "ATC_5"
+}
+dROOMS = {
+	"ATC_0" : ""
+,	"ATC_1" : "ch parents"
+,	"ATC_2" : "ch cedric"
+,	"ATC_3" : "ch eva"
+,	"ATC_4" : "salon"
+,	"ATC_5" : ""
+}
 #print(readme)
 
 
@@ -544,6 +560,9 @@ if __name__ == "__main__":
 
 					if len(strippedData_str) == 26: #ATC1441 Format
 						print("BLE packet - ATC1441: %s %02x %s %d" % (mac, adv_type, data_str, rssi))
+						name = dSENSORS[mac] if mac in dSENSORS.keys() else ""
+						room = dROOMS[name] if name in dROOMS.keys() else ""
+						print(f"name:{name} room:{room}")
 						advCounter[macStr] = advNumber
 						#temperature = int(data_str[12:16],16) / 10.    # this method fails for negative temperatures
 						temperature = int.from_bytes(bytearray.fromhex(strippedData_str[12:16]),byteorder='big',signed=True) / 10.
