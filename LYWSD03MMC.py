@@ -57,6 +57,7 @@ class Measurement:
 		else:
 			return False
 
+cnt = 1
 measurements=deque()
 #globalBatteryLevel=0
 previousMeasurements={}
@@ -298,12 +299,17 @@ if __name__ == "__main__":
 				print("Humidity: ", measurement.humidity)
 				if measurement.voltage != None:
 					print ("Battery voltage:", measurement.voltage,"V")
-				print ("RSSI:", rssi, "dBm")
-				print ("Battery:", measurement.battery,"%")
+				print("RSSI:", rssi, "dBm")
+				print("Battery:", measurement.battery,"%")
 				
 				if args.callback:
 					measurements.append(measurement)
 
+				global cnt
+				print(f"cnt:{cnt}/{args.count}")
+				cnt += 1
+				if args.count and cnt > args.count:
+					sys.exit(0)
 				print("")
 
 		if  args.watchdogtimer:
