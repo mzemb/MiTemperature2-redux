@@ -25,7 +25,6 @@ dROOMS = {
 ,	"ATC_5" : ""
 }
 
-from bluepy import btle
 import argparse
 import os
 import re
@@ -36,7 +35,6 @@ import time
 import signal
 import traceback
 import logging
-import requests
 
 
 @dataclass
@@ -207,7 +205,6 @@ if __name__ == "__main__":
 
 	import sys
 	import bluetooth._bluetooth as bluez
-	import cryptoFunctions
 
 	from bluetooth_utils import (toggle_device,
 								enable_le_scan, parse_le_advertising_events,
