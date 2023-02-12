@@ -1,9 +1,9 @@
 #!/usr/bin/env -S python3 -u
 #-u to unbuffer output. Otherwise when calling with nohup or redirecting output things are printed very lately or would even mixup
 
-print("---------------------------------------------")
-print("MiTemperature2 / ATC Thermometer version 5.0")
-print("---------------------------------------------")
+#print("---------------------------------------------")
+#print("MiTemperature2 / ATC Thermometer version 5.0r")
+#print("---------------------------------------------")
 
 readme="""
 
@@ -12,7 +12,7 @@ This file explains very detailed about the usage and covers everything you need 
 
 """
 
-print(readme)
+#print(readme)
 
 
 from bluepy import btle
@@ -46,7 +46,7 @@ class Measurement:
 	def __eq__(self, other): #rssi may be different, so exclude it from comparison
 		if self.temperature == other.temperature and self.humidity == other.humidity and self.calibratedHumidity == other.calibratedHumidity and self.battery == other.battery and self.sensorname == other.sensorname:
 			#in passive mode also exclude voltage as it changes often due to frequent measurements
-			return True if args.passive else (self.voltage == other.voltage)
+			return True #if args.passive else (self.voltage == other.voltage)
 		else:
 			return False
 
@@ -73,8 +73,7 @@ def myMQTTPublish(topic,jsonMessage):
 
 
 def signal_handler(sig, frame):
-	if args.passive:
-		disable_le_scan(sock)	
+	disable_le_scan(sock)	
 	os._exit(0)
 		
 def watchDog_Thread():
@@ -364,7 +363,7 @@ callbackgroup.add_argument("--callback-interval","-int", help="Only invoke callb
 callbackgroup.add_argument("--influxdb","-infl", help="Optimize for writing data to influxdb,1 timestamp optimization, 2 integer optimization",metavar='N', type=int, default=0)
 
 passivegroup = parser.add_argument_group("Passive mode related arguments")
-passivegroup.add_argument("--passive","-p","--atc","-a", help="Read the data of devices based on BLE advertisements, use --battery to get battery level additionaly in percent",action='store_true')
+#passivegroup.add_argument("--passive","-p","--atc","-a", help="Read the data of devices based on BLE advertisements, use --battery to get battery level additionaly in percent",action='store_true')
 passivegroup.add_argument("--watchdogtimer","-wdt",metavar='X', type=int, help="Re-enable scanning after not receiving any BLE packet after X seconds")
 passivegroup.add_argument("--devicelistfile","-df",help="Specify a device list file giving further details to devices")
 passivegroup.add_argument("--onlydevicelist","-odl", help="Only read devices which are in the device list file",action='store_true')
@@ -441,9 +440,6 @@ if args.device:
 	else:
 		print("Please specify device MAC address in format AA:BB:CC:DD:EE:FF")
 		os._exit(1)
-elif not args.passive:
-	parser.print_help()
-	os._exit(1)
 
 if args.TwoPointCalibration:
 	if(not(args.calpoint1 is not None and args.offset1 is not None
@@ -462,103 +458,16 @@ if args.callback or args.httpcallback:
 
 signal.signal(signal.SIGINT, signal_handler)	
 
-if args.device: 
 
-	p=btle.Peripheral()
-	cnt=0
-
-	connected=False
-	#logging.basicConfig(level=logging.DEBUG)
-	logging.basicConfig(level=logging.ERROR)
-	logging.debug("Debug: Starting script...")
-	pid=os.getpid()	
-	bluepypid=None
-	unconnectedTime=None
-	connectionLostCounter=0
-
-	watchdogThread = threading.Thread(target=watchDog_Thread)
-	watchdogThread.start()
-	logging.debug("watchdogThread started")
-
-	while True:
-		try:
-			if not connected:
-				#Bluepy sometimes hangs and makes it even impossible to connect with gatttool as long it is running
-				#on every new connection a new bluepy-helper is called
-				#we now make sure that the old one is really terminated. Even if it hangs a simple kill signal was sufficient to terminate it
-				# if bluepypid is not None:
-					# os.system("kill " + bluepypid)
-					# print("Killed possibly remaining bluepy-helper")
-				# else:
-					# print("bluepy-helper couldn't be determined, killing not allowed")
-						
-				print("Trying to connect to " + adress)
-				p=connect()
-				# logging.debug("Own PID: "  + str(pid))
-				# pstree=os.popen("pstree -p " + str(pid)).read() #we want to kill only bluepy from our own process tree, because other python scripts have there own bluepy-helper process
-				# logging.debug("PSTree: " + pstree)
-				# try:
-					# bluepypid=re.findall(r'bluepy-helper\((.*)\)',pstree)[0] #Store the bluepypid, to kill it later
-				# except IndexError: #Should not happen since we're now connected
-					# logging.debug("Couldn't find pid of bluepy-helper")				
-				connected=True
-				unconnectedTime=None
-				
-			# if args.battery:
-					# if(cnt % args.battery == 0):
-						# print("Warning the battery option is deprecated, Aqara device always reports 99 % battery")
-						# batt=p.readCharacteristic(0x001b)
-						# batt=int.from_bytes(batt,byteorder="little")
-						# print("Battery-Level: " + str(batt))
-						# globalBatteryLevel = batt
-				
-				
-			if p.waitForNotifications(2000):
-				# handleNotification() was called
-				
-				cnt += 1
-				if args.count is not None and cnt >= args.count:
-					print(str(args.count) + " measurements collected. Exiting in a moment.")
-					p.disconnect()
-					time.sleep(5)
-					#It seems that sometimes bluepy-helper remains and thus prevents a reconnection, so we try killing our own bluepy-helper
-					pstree=os.popen("pstree -p " + str(pid)).read() #we want to kill only bluepy from our own process tree, because other python scripts have there own bluepy-helper process
-					bluepypid=0
-					try:
-						bluepypid=re.findall(r'bluepy-helper\((.*)\)',pstree)[0] #Store the bluepypid, to kill it later
-					except IndexError: #Should normally occur because we're disconnected
-						logging.debug("Couldn't find pid of bluepy-helper")
-					if bluepypid != 0:
-						os.system("kill " + bluepypid)
-						logging.debug("Killed bluepy with pid: " + str(bluepypid))
-					os._exit(0)
-				print("")
-				continue
-		except Exception as e:
-			print("Connection lost")
-			connectionLostCounter +=1
-			if connected is True: #First connection abort after connected
-				unconnectedTime=int(time.time())
-				connected=False
-			if args.unreachable_count != 0 and connectionLostCounter >= args.unreachable_count:
-				print("Maximum numbers of unsuccessful connections reached, exiting")
-				os._exit(0)
-			time.sleep(1)
-			logging.debug(e)
-			logging.debug(traceback.format_exc())		
-			
-		print ("Waiting...")
-		# Perhaps do something else here
-
-elif args.passive:
-	print("Script started in passive mode")
-	print("------------------------------")
-	print("In this mode all devices within reach are read out, unless a devicelistfile and --onlydevicelist is specified.")
-	print("Also --name Argument is ignored, if you require names, please use --devicelistfile.")
-	print("In this mode debouncing is not available. Rounding option will round humidity and temperature to one decimal place.")
-	print("Passive mode usually requires root rights. If you want to use it with normal user rights, \nplease execute \"sudo setcap cap_net_raw,cap_net_admin+eip $(eval readlink -f `which python3`)\"")
-	print("You have to redo this step if you upgrade your python version.")
-	print("----------------------------")
+if __name__ == "__main__":
+	#print("Script started in passive mode")
+	#print("------------------------------")
+	#print("In this mode all devices within reach are read out, unless a devicelistfile and --onlydevicelist is specified.")
+	#print("Also --name Argument is ignored, if you require names, please use --devicelistfile.")
+	#print("In this mode debouncing is not available. Rounding option will round humidity and temperature to one decimal place.")
+	#print("Passive mode usually requires root rights. If you want to use it with normal user rights, \nplease execute \"sudo setcap cap_net_raw,cap_net_admin+eip $(eval readlink -f `which python3`)\"")
+	#print("You have to redo this step if you upgrade your python version.")
+	#print("----------------------------")
 
 	import sys
 	import bluetooth._bluetooth as bluez
